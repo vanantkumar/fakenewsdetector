@@ -1,5 +1,7 @@
 streamlit
-scikit-learn
+requests
+beautifulsoup4
+reportlab
+passlib
+google-generativeai
 pandas
-nltk
-numpy
