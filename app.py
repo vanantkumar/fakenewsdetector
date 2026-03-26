@@ -11,32 +11,47 @@ import re
 import time
 
 # -------------------- CONFIG --------------------
-st.set_page_config(page_title="AI Fake News Detector", layout="wide")
+st.set_page_config(page_title="AI Fake News Investigator", layout="wide")
 
-# -------------------- PREMIUM CSS --------------------
+# -------------------- DETECTIVE UI --------------------
 st.markdown("""
 <style>
 body {
-    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-    color: white;
+    background: radial-gradient(circle at top, #1a1a2e, #0f172a, #020617);
+    color: #e2e8f0;
 }
-.block-container {padding:2rem;}
 
+/* Hero */
+.hero {
+    text-align:center;
+    font-size:48px;
+    font-weight:bold;
+    color:#facc15;
+    text-shadow:0 0 15px rgba(250,204,21,0.6);
+}
+.subtitle {
+    text-align:center;
+    color:#94a3b8;
+    margin-bottom:30px;
+}
+
+/* Cards */
 .card {
     background: rgba(255,255,255,0.05);
-    backdrop-filter: blur(10px);
-    border-radius: 15px;
-    padding: 20px;
-    margin-top: 15px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    backdrop-filter: blur(12px);
+    border-radius:15px;
+    padding:20px;
+    margin-top:15px;
+    box-shadow:0 8px 25px rgba(0,0,0,0.6);
 }
 
+/* Buttons */
 .stButton>button {
-    border-radius: 12px;
-    background: linear-gradient(90deg, #ff512f, #dd2476);
-    color: white;
-    height: 3em;
-    width: 100%;
+    border-radius:10px;
+    background: linear-gradient(90deg,#facc15,#f97316);
+    color:black;
+    font-weight:bold;
+    height:3em;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -48,7 +63,6 @@ c = conn.cursor()
 c.execute("CREATE TABLE IF NOT EXISTS users (username TEXT, password TEXT, role TEXT)")
 c.execute("CREATE TABLE IF NOT EXISTS history (username TEXT, news TEXT, result TEXT)")
 
-# Default admin
 if not c.execute("SELECT * FROM users WHERE username='admin'").fetchone():
     c.execute("INSERT INTO users VALUES (?, ?, ?)",
               ("admin", hashlib.sha256("admin123".encode()).hexdigest(), "admin"))
@@ -57,33 +71,34 @@ if not c.execute("SELECT * FROM users WHERE username='admin'").fetchone():
 # -------------------- SESSION --------------------
 if "user" not in st.session_state:
     st.session_state["user"] = None
+if "page" not in st.session_state:
+    st.session_state["page"] = "Analyze"
 
-# -------------------- LOGIN POPUP --------------------
+# -------------------- HERO --------------------
+st.markdown("""
+<div class="hero">🕵️ AI FAKE NEWS INVESTIGATOR</div>
+<div class="subtitle">Analyze • Detect • Verify Truth</div>
+""", unsafe_allow_html=True)
+
+# -------------------- LOGIN / SIGNUP --------------------
 if not st.session_state["user"]:
-    st.markdown("<h1 style='text-align:center;'>🧠 AI Fake News Detector</h1>", unsafe_allow_html=True)
 
-    if "show_login" not in st.session_state:
-        st.session_state.show_login = False
-    if "show_signup" not in st.session_state:
-        st.session_state.show_signup = False
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("🔐 Login"):
-            st.session_state.show_login = True
-
+    col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        if st.button("🆕 Signup"):
-            st.session_state.show_signup = True
+        b1, b2 = st.columns(2)
+        with b1:
+            if st.button("🔐 Login"):
+                st.session_state.show_login = True
+        with b2:
+            if st.button("🆕 Signup"):
+                st.session_state.show_signup = True
 
-    # LOGIN
-    if st.session_state.show_login:
+    if st.session_state.get("show_login"):
         st.markdown("### 🔐 Login")
         u = st.text_input("Username")
         p = st.text_input("Password", type="password")
 
-        if st.button("Submit Login"):
+        if st.button("Enter"):
             user = c.execute("SELECT * FROM users WHERE username=?", (u,)).fetchone()
             if user and hashlib.sha256(p.encode()).hexdigest() == user[1]:
                 st.session_state["user"] = u
@@ -92,13 +107,12 @@ if not st.session_state["user"]:
             else:
                 st.error("Invalid credentials")
 
-    # SIGNUP
-    if st.session_state.show_signup:
+    if st.session_state.get("show_signup"):
         st.markdown("### 🆕 Signup")
         u = st.text_input("New Username")
         p = st.text_input("New Password", type="password")
 
-        if st.button("Create Account"):
+        if st.button("Create"):
             c.execute("INSERT INTO users VALUES (?, ?, ?)",
                       (u, hashlib.sha256(p.encode()).hexdigest(), "user"))
             conn.commit()
@@ -109,12 +123,9 @@ if not st.session_state["user"]:
 
 # -------------------- GEMINI --------------------
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-
-model_name = next(
-    m.name for m in genai.list_models()
-    if "generateContent" in m.supported_generation_methods
+model = genai.GenerativeModel(
+    next(m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods)
 )
-model = genai.GenerativeModel(model_name)
 
 # -------------------- NEWS FETCH --------------------
 def fetch_real_news(q):
@@ -128,12 +139,9 @@ def fetch_real_news(q):
 # -------------------- ANALYSIS --------------------
 def analyze_news(text):
     headlines = "\n".join(fetch_real_news(text)) or "No news found"
-
     prompt = f"""
     Date: {datetime.now().strftime("%B %Y")}
-
     News: {text}
-
     Real Headlines:
     {headlines}
 
@@ -141,26 +149,34 @@ def analyze_news(text):
     Confidence: XX%
     Explanation:
     """
-
     return model.generate_content(prompt).text
 
-# -------------------- SIDEBAR --------------------
-st.sidebar.title("🧭 Navigation")
-page = st.sidebar.radio("Go to", ["Analyze", "Dashboard", "History"])
-st.sidebar.write(f"👤 {st.session_state['user']}")
+# -------------------- NAVIGATION --------------------
+st.markdown("## 🔍 Navigate")
+
+c1, c2, c3 = st.columns(3)
+with c1:
+    if st.button("🧠 Analyze"):
+        st.session_state.page = "Analyze"
+with c2:
+    if st.button("📊 Dashboard"):
+        st.session_state.page = "Dashboard"
+with c3:
+    if st.button("📜 History"):
+        st.session_state.page = "History"
+
+page = st.session_state.page
 
 # -------------------- ANALYZE --------------------
 if page == "Analyze":
-    st.markdown("<h2>🧠 Analyze News</h2>", unsafe_allow_html=True)
-
     news = st.text_area("Enter News", height=200)
 
     if st.button("Analyze"):
-        with st.spinner("🤖 AI analyzing..."):
+        with st.spinner("🧠 Investigating..."):
             progress = st.progress(0)
             for i in range(100):
                 time.sleep(0.01)
-                progress.progress(i + 1)
+                progress.progress(i+1)
 
             result = analyze_news(news)
 
@@ -184,8 +200,6 @@ if page == "Analyze":
 
 # -------------------- DASHBOARD --------------------
 elif page == "Dashboard":
-    st.markdown("<h2>📊 Dashboard</h2>", unsafe_allow_html=True)
-
     rows = c.execute("SELECT * FROM history").fetchall()
 
     if rows:
@@ -205,8 +219,6 @@ elif page == "Dashboard":
 
 # -------------------- HISTORY --------------------
 elif page == "History":
-    st.markdown("<h2>📜 History</h2>", unsafe_allow_html=True)
-
     rows = c.execute("SELECT * FROM history WHERE username=?",
                      (st.session_state["user"],)).fetchall()
 
@@ -214,6 +226,6 @@ elif page == "History":
         st.markdown(f"<div class='card'>📰 {r[1][:150]}...<br><br>{r[2]}</div>", unsafe_allow_html=True)
 
 # -------------------- LOGOUT --------------------
-if st.sidebar.button("Logout"):
+if st.button("Logout"):
     st.session_state["user"] = None
     st.rerun()
