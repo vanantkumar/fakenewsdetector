@@ -1,6 +1,0 @@
-streamlit
-requests
-reportlab
-passlib
-google-generativeai
-pandas
