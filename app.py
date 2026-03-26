@@ -1,6 +1,11 @@
 import streamlit as st
 import requests
-from bs4 import BeautifulSoup
+try:
+    from bs4 import BeautifulSoup
+except:
+    import os
+    os.system("pip install beautifulsoup4")
+    from bs4 import BeautifulSoup
 import sqlite3
 from passlib.hash import pbkdf2_sha256
 import google.generativeai as genai
