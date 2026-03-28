@@ -16,31 +16,65 @@ st.set_page_config(page_title="AI Fake News Investigator", layout="wide")
 # -------------------- CSS --------------------
 st.markdown("""
 <style>
-/* Split screen */
-.login-container {
-    display: flex;
-    height: 100vh;
-}
-.left-panel {
-    width: 50%;
-    background: repeating-linear-gradient(
-        135deg, #111 0px, #111 40px, #fff 40px, #fff 80px
-    );
-}
-.right-panel {
-    width: 50%;
-    background: #f9fafb;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-.login-box {
-    width: 70%;
+
+/* Background Image */
+.stApp {
+    background-image: url("https://t3.ftcdn.net/jpg/17/99/92/42/360_F_1799924294_c6IkNOhxt7Vv6SYasT9xcTHxhdswWYZ9.jpg");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
 }
 
-/* App background */
-body {
-    background: radial-gradient(circle at top, #1a1a2e, #0f172a, #020617);
+/* Dark overlay */
+.stApp::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.65);
+    z-index: 0;
+}
+
+/* Login Box */
+.login-box {
+    position: relative;
+    z-index: 1;
+    background: rgba(0,0,0,0.75);
+    padding: 40px;
+    border-radius: 15px;
+    width: 350px;
+    margin: auto;
+    margin-top: 120px;
+    text-align: center;
+    backdrop-filter: blur(8px);
+}
+
+/* Title */
+.login-title {
+    font-size: 30px;
+    font-weight: bold;
+    color: #facc15;
+}
+
+/* Subtitle */
+.login-sub {
+    color: #ccc;
+    margin-bottom: 20px;
+}
+
+/* Inputs */
+.stTextInput>div>div>input {
+    background-color: #111;
+    color: white;
+    border-radius: 8px;
+}
+
+/* Buttons */
+.stButton>button {
+    background: linear-gradient(90deg,#facc15,#f97316);
+    color: black;
+    border-radius: 8px;
+    font-weight: bold;
 }
 
 /* Cards */
@@ -52,13 +86,6 @@ body {
     margin-top:15px;
 }
 
-/* Buttons */
-.stButton>button {
-    border-radius:10px;
-    background: linear-gradient(90deg,#facc15,#f97316);
-    color:black;
-    font-weight:bold;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -84,18 +111,23 @@ if "page" not in st.session_state:
 if not st.session_state["user"]:
 
     st.markdown("""
-    <div class="login-container">
-        <div class="left-panel"></div>
-        <div class="right-panel">
-            <div class="login-box">
-                <h2>🕵️ Investigator</h2>
-                <p>Welcome back!</p>
+    <div class="login-box">
+        <div class="login-title">🕵️ Investigator Login</div>
+        <div class="login-sub">Access the truth engine</div>
     """, unsafe_allow_html=True)
 
-    username = st.text_input("Email")
+    username = st.text_input("Username")
     password = st.text_input("Password", type="password")
 
-    if st.button("Sign in"):
+    col1, col2 = st.columns(2)
+
+    with col1:
+        login_btn = st.button("Login")
+
+    with col2:
+        signup_btn = st.button("Signup")
+
+    if login_btn:
         user = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
         if user and hashlib.sha256(password.encode()).hexdigest() == user[1]:
             st.session_state["user"] = username
@@ -103,7 +135,14 @@ if not st.session_state["user"]:
         else:
             st.error("Invalid credentials")
 
-    st.markdown("</div></div></div>", unsafe_allow_html=True)
+    if signup_btn:
+        if username and password:
+            c.execute("INSERT INTO users VALUES (?, ?, ?)",
+                      (username, hashlib.sha256(password.encode()).hexdigest(), "user"))
+            conn.commit()
+            st.success("Account created! Now login.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
 # -------------------- GEMINI --------------------
@@ -140,23 +179,23 @@ def analyze_news(text):
     return model.generate_content(prompt).text
 
 # -------------------- HEADER --------------------
-st.markdown("<h1 style='text-align:center;'>🕵️ AI Fake News Investigator</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;color:#facc15;'>🕵️ AI Fake News Investigator</h1>", unsafe_allow_html=True)
 
-# -------------------- NAV --------------------
-col1, col2, col3 = st.columns(3)
-with col1:
+# -------------------- NAVIGATION --------------------
+c1, c2, c3 = st.columns(3)
+with c1:
     if st.button("🧠 Analyze"):
         st.session_state.page = "Analyze"
-with col2:
+with c2:
     if st.button("📊 Dashboard"):
         st.session_state.page = "Dashboard"
-with col3:
+with c3:
     if st.button("📜 History"):
         st.session_state.page = "History"
 
 page = st.session_state.page
 
-# -------------------- ANALYZE PAGE --------------------
+# -------------------- ANALYZE --------------------
 if page == "Analyze":
     news = st.text_area("Enter News", height=200)
 
@@ -198,11 +237,11 @@ elif page == "Dashboard":
         real = df["Result"].str.contains("real", case=False).sum()
         unv = df["Result"].str.contains("unverified", case=False).sum()
 
-        c1, c2, c3 = st.columns(3)
+        col1, col2, col3 = st.columns(3)
 
-        c1.markdown(f"<div class='card'>🚨 Fake<br><h2>{fake}</h2></div>", unsafe_allow_html=True)
-        c2.markdown(f"<div class='card'>✅ Real<br><h2>{real}</h2></div>", unsafe_allow_html=True)
-        c3.markdown(f"<div class='card'>🤔 Unverified<br><h2>{unv}</h2></div>", unsafe_allow_html=True)
+        col1.markdown(f"<div class='card'>🚨 Fake<br><h2>{fake}</h2></div>", unsafe_allow_html=True)
+        col2.markdown(f"<div class='card'>✅ Real<br><h2>{real}</h2></div>", unsafe_allow_html=True)
+        col3.markdown(f"<div class='card'>🤔 Unverified<br><h2>{unv}</h2></div>", unsafe_allow_html=True)
 
         st.bar_chart({"Fake":[fake], "Real":[real], "Unverified":[unv]})
 
