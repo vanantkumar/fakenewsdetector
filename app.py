@@ -13,47 +13,41 @@ import time
 # -------------------- CONFIG --------------------
 st.set_page_config(page_title="AI Fake News Investigator", layout="wide")
 
-# -------------------- CSS --------------------
+# -------------------- ANIMATED LOGIN CSS --------------------
 st.markdown("""
 <style>
 
-/* Background Image */
+/* Animated gradient background */
+@keyframes gradientBG {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+}
+
 .stApp {
-    background-image: url("https://t3.ftcdn.net/jpg/17/99/92/42/360_F_1799924294_c6IkNOhxt7Vv6SYasT9xcTHxhdswWYZ9.jpg");
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
+    background: linear-gradient(-45deg, #0f2027, #2c5364, #1a1a2e, #203a43);
+    background-size: 400% 400%;
+    animation: gradientBG 10s ease infinite;
 }
 
-/* Dark overlay */
-.stApp::before {
-    content: "";
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0,0,0,0.65);
-    z-index: 0;
-}
-
-/* Login Box */
-.login-box {
-    position: relative;
-    z-index: 1;
-    background: rgba(0,0,0,0.75);
-    padding: 40px;
-    border-radius: 15px;
+/* Login card */
+.login-card {
     width: 350px;
     margin: auto;
     margin-top: 120px;
+    padding: 35px;
+    border-radius: 15px;
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(15px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
     text-align: center;
-    backdrop-filter: blur(8px);
 }
 
 /* Title */
 .login-title {
-    font-size: 30px;
+    font-size: 28px;
     font-weight: bold;
-    color: #facc15;
+    color: white;
 }
 
 /* Subtitle */
@@ -64,16 +58,16 @@ st.markdown("""
 
 /* Inputs */
 .stTextInput>div>div>input {
-    background-color: #111;
+    background: rgba(0,0,0,0.6);
     color: white;
     border-radius: 8px;
 }
 
 /* Buttons */
 .stButton>button {
-    background: linear-gradient(90deg,#facc15,#f97316);
-    color: black;
     border-radius: 8px;
+    background: linear-gradient(90deg,#00c6ff,#0072ff);
+    color: white;
     font-weight: bold;
 }
 
@@ -106,48 +100,53 @@ if "user" not in st.session_state:
     st.session_state["user"] = None
 if "page" not in st.session_state:
     st.session_state["page"] = "Analyze"
+if "auth_mode" not in st.session_state:
+    st.session_state["auth_mode"] = "login"
 
-# -------------------- LOGIN --------------------
+# -------------------- LOGIN / SIGNUP --------------------
 if not st.session_state["user"]:
 
     st.markdown("""
-    <div class="login-box">
-        <div class="login-title">🕵️ Investigator Login</div>
-        <div class="login-sub">Access the truth engine</div>
+    <div class="login-card">
+        <div class="login-title">🕵️ Investigator</div>
+        <div class="login-sub">Secure access portal</div>
     """, unsafe_allow_html=True)
 
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
 
-    col1, col2 = st.columns(2)
+    if st.session_state.auth_mode == "login":
 
-    with col1:
-        login_btn = st.button("Login")
+        if st.button("Login"):
+            user = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+            if user and hashlib.sha256(password.encode()).hexdigest() == user[1]:
+                st.session_state["user"] = username
+                st.rerun()
+            else:
+                st.error("Invalid credentials")
 
-    with col2:
-        signup_btn = st.button("Signup")
-
-    if login_btn:
-        user = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
-        if user and hashlib.sha256(password.encode()).hexdigest() == user[1]:
-            st.session_state["user"] = username
+        if st.button("Switch to Signup"):
+            st.session_state.auth_mode = "signup"
             st.rerun()
-        else:
-            st.error("Invalid credentials")
 
-    if signup_btn:
-        if username and password:
-            c.execute("INSERT INTO users VALUES (?, ?, ?)",
-                      (username, hashlib.sha256(password.encode()).hexdigest(), "user"))
-            conn.commit()
-            st.success("Account created! Now login.")
+    else:
+
+        if st.button("Create Account"):
+            if username and password:
+                c.execute("INSERT INTO users VALUES (?, ?, ?)",
+                          (username, hashlib.sha256(password.encode()).hexdigest(), "user"))
+                conn.commit()
+                st.success("Account created")
+
+        if st.button("Switch to Login"):
+            st.session_state.auth_mode = "login"
+            st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
 # -------------------- GEMINI --------------------
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-
 model = genai.GenerativeModel(
     next(m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods)
 )
@@ -179,7 +178,7 @@ def analyze_news(text):
     return model.generate_content(prompt).text
 
 # -------------------- HEADER --------------------
-st.markdown("<h1 style='text-align:center;color:#facc15;'>🕵️ AI Fake News Investigator</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;color:white;'>🕵️ AI Fake News Investigator</h1>", unsafe_allow_html=True)
 
 # -------------------- NAVIGATION --------------------
 c1, c2, c3 = st.columns(3)
