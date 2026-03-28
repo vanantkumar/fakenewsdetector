@@ -13,26 +13,34 @@ import time
 # -------------------- CONFIG --------------------
 st.set_page_config(page_title="AI Fake News Investigator", layout="wide")
 
-# -------------------- DETECTIVE UI --------------------
+# -------------------- CSS --------------------
 st.markdown("""
 <style>
-body {
-    background: radial-gradient(circle at top, #1a1a2e, #0f172a, #020617);
-    color: #e2e8f0;
+/* Split screen */
+.login-container {
+    display: flex;
+    height: 100vh;
+}
+.left-panel {
+    width: 50%;
+    background: repeating-linear-gradient(
+        135deg, #111 0px, #111 40px, #fff 40px, #fff 80px
+    );
+}
+.right-panel {
+    width: 50%;
+    background: #f9fafb;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.login-box {
+    width: 70%;
 }
 
-/* Hero */
-.hero {
-    text-align:center;
-    font-size:48px;
-    font-weight:bold;
-    color:#facc15;
-    text-shadow:0 0 15px rgba(250,204,21,0.6);
-}
-.subtitle {
-    text-align:center;
-    color:#94a3b8;
-    margin-bottom:30px;
+/* App background */
+body {
+    background: radial-gradient(circle at top, #1a1a2e, #0f172a, #020617);
 }
 
 /* Cards */
@@ -42,7 +50,6 @@ body {
     border-radius:15px;
     padding:20px;
     margin-top:15px;
-    box-shadow:0 8px 25px rgba(0,0,0,0.6);
 }
 
 /* Buttons */
@@ -51,7 +58,6 @@ body {
     background: linear-gradient(90deg,#facc15,#f97316);
     color:black;
     font-weight:bold;
-    height:3em;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -74,60 +80,40 @@ if "user" not in st.session_state:
 if "page" not in st.session_state:
     st.session_state["page"] = "Analyze"
 
-# -------------------- HERO --------------------
-st.markdown("""
-<div class="hero">🕵️ AI FAKE NEWS INVESTIGATOR</div>
-<div class="subtitle">Analyze • Detect • Verify Truth</div>
-""", unsafe_allow_html=True)
-
-# -------------------- LOGIN / SIGNUP --------------------
+# -------------------- LOGIN --------------------
 if not st.session_state["user"]:
 
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
-        b1, b2 = st.columns(2)
-        with b1:
-            if st.button("🔐 Login"):
-                st.session_state.show_login = True
-        with b2:
-            if st.button("🆕 Signup"):
-                st.session_state.show_signup = True
+    st.markdown("""
+    <div class="login-container">
+        <div class="left-panel"></div>
+        <div class="right-panel">
+            <div class="login-box">
+                <h2>🕵️ Investigator</h2>
+                <p>Welcome back!</p>
+    """, unsafe_allow_html=True)
 
-    if st.session_state.get("show_login"):
-        st.markdown("### 🔐 Login")
-        u = st.text_input("Username")
-        p = st.text_input("Password", type="password")
+    username = st.text_input("Email")
+    password = st.text_input("Password", type="password")
 
-        if st.button("Enter"):
-            user = c.execute("SELECT * FROM users WHERE username=?", (u,)).fetchone()
-            if user and hashlib.sha256(p.encode()).hexdigest() == user[1]:
-                st.session_state["user"] = u
-                st.session_state.show_login = False
-                st.rerun()
-            else:
-                st.error("Invalid credentials")
+    if st.button("Sign in"):
+        user = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+        if user and hashlib.sha256(password.encode()).hexdigest() == user[1]:
+            st.session_state["user"] = username
+            st.rerun()
+        else:
+            st.error("Invalid credentials")
 
-    if st.session_state.get("show_signup"):
-        st.markdown("### 🆕 Signup")
-        u = st.text_input("New Username")
-        p = st.text_input("New Password", type="password")
-
-        if st.button("Create"):
-            c.execute("INSERT INTO users VALUES (?, ?, ?)",
-                      (u, hashlib.sha256(p.encode()).hexdigest(), "user"))
-            conn.commit()
-            st.success("Account created")
-            st.session_state.show_signup = False
-
+    st.markdown("</div></div></div>", unsafe_allow_html=True)
     st.stop()
 
 # -------------------- GEMINI --------------------
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+
 model = genai.GenerativeModel(
     next(m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods)
 )
 
-# -------------------- NEWS FETCH --------------------
+# -------------------- FETCH NEWS --------------------
 def fetch_real_news(q):
     try:
         url = f"https://news.google.com/rss/search?q={urllib.parse.quote(q)}&hl=en-IN&gl=IN&ceid=IN:en"
@@ -136,9 +122,10 @@ def fetch_real_news(q):
     except:
         return []
 
-# -------------------- ANALYSIS --------------------
+# -------------------- ANALYZE --------------------
 def analyze_news(text):
     headlines = "\n".join(fetch_real_news(text)) or "No news found"
+
     prompt = f"""
     Date: {datetime.now().strftime("%B %Y")}
     News: {text}
@@ -149,25 +136,27 @@ def analyze_news(text):
     Confidence: XX%
     Explanation:
     """
+
     return model.generate_content(prompt).text
 
-# -------------------- NAVIGATION --------------------
-st.markdown("## 🔍 Navigate")
+# -------------------- HEADER --------------------
+st.markdown("<h1 style='text-align:center;'>🕵️ AI Fake News Investigator</h1>", unsafe_allow_html=True)
 
-c1, c2, c3 = st.columns(3)
-with c1:
+# -------------------- NAV --------------------
+col1, col2, col3 = st.columns(3)
+with col1:
     if st.button("🧠 Analyze"):
         st.session_state.page = "Analyze"
-with c2:
+with col2:
     if st.button("📊 Dashboard"):
         st.session_state.page = "Dashboard"
-with c3:
+with col3:
     if st.button("📜 History"):
         st.session_state.page = "History"
 
 page = st.session_state.page
 
-# -------------------- ANALYZE --------------------
+# -------------------- ANALYZE PAGE --------------------
 if page == "Analyze":
     news = st.text_area("Enter News", height=200)
 
@@ -209,11 +198,11 @@ elif page == "Dashboard":
         real = df["Result"].str.contains("real", case=False).sum()
         unv = df["Result"].str.contains("unverified", case=False).sum()
 
-        col1, col2, col3 = st.columns(3)
+        c1, c2, c3 = st.columns(3)
 
-        col1.markdown(f"<div class='card'>🚨 Fake<br><h2>{fake}</h2></div>", unsafe_allow_html=True)
-        col2.markdown(f"<div class='card'>✅ Real<br><h2>{real}</h2></div>", unsafe_allow_html=True)
-        col3.markdown(f"<div class='card'>🤔 Unverified<br><h2>{unv}</h2></div>", unsafe_allow_html=True)
+        c1.markdown(f"<div class='card'>🚨 Fake<br><h2>{fake}</h2></div>", unsafe_allow_html=True)
+        c2.markdown(f"<div class='card'>✅ Real<br><h2>{real}</h2></div>", unsafe_allow_html=True)
+        c3.markdown(f"<div class='card'>🤔 Unverified<br><h2>{unv}</h2></div>", unsafe_allow_html=True)
 
         st.bar_chart({"Fake":[fake], "Real":[real], "Unverified":[unv]})
 
