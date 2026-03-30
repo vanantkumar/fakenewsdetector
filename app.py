@@ -13,18 +13,16 @@ import time
 # -------------------- CONFIG --------------------
 st.set_page_config(page_title="Fake News Detector", layout="wide")
 
-# -------------------- CSS FIX --------------------
+# -------------------- CSS --------------------
 st.markdown("""
 <style>
 
-/* REMOVE TOP WHITE SPACE COMPLETELY */
+/* REMOVE STREAMLIT HEADER SPACE */
 header, footer {
     visibility: hidden;
 }
-
 .block-container {
     padding-top: 0rem;
-    padding-bottom: 0rem;
 }
 
 /* BACKGROUND IMAGE */
@@ -55,11 +53,9 @@ header, footer {
 
 .left h1 {
     font-size: 48px;
-    font-weight: bold;
 }
 
 .left p {
-    margin-top: 20px;
     color: #ddd;
 }
 
@@ -73,7 +69,6 @@ header, footer {
     max-width: 420px;
     margin: auto;
     margin-top: 120px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
 
 /* BUTTON */
@@ -82,7 +77,14 @@ header, footer {
     border-radius: 6px;
     background: #2575fc;
     color: white;
-    font-weight: bold;
+}
+
+/* MAIN CARDS */
+.main-card {
+    background: rgba(255,255,255,0.08);
+    padding:20px;
+    border-radius:15px;
+    color:white;
 }
 
 </style>
@@ -103,10 +105,8 @@ if not c.execute("SELECT * FROM users WHERE username='admin'").fetchone():
 # -------------------- SESSION --------------------
 if "user" not in st.session_state:
     st.session_state["user"] = None
-
 if "page" not in st.session_state:
     st.session_state["page"] = "Analyze"
-
 if "auth_mode" not in st.session_state:
     st.session_state["auth_mode"] = "login"
 
@@ -115,7 +115,6 @@ if not st.session_state["user"]:
 
     col1, col2 = st.columns([1,1])
 
-    # LEFT SIDE
     with col1:
         st.markdown("""
         <div class="left">
@@ -124,12 +123,10 @@ if not st.session_state["user"]:
         </div>
         """, unsafe_allow_html=True)
 
-    # RIGHT SIDE
     with col2:
         st.markdown('<div class="card">', unsafe_allow_html=True)
 
         if st.session_state["auth_mode"] == "login":
-
             st.markdown("### Login")
 
             username = st.text_input("Username")
@@ -137,14 +134,12 @@ if not st.session_state["user"]:
 
             if st.button("Login"):
                 user = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
-
                 if user and hashlib.sha256(password.encode()).hexdigest() == user[1]:
                     st.session_state["user"] = username
                     st.rerun()
                 else:
                     st.error("Invalid credentials")
 
-            # 👇 Signup BELOW login
             if st.button("Signup"):
                 st.session_state["auth_mode"] = "signup"
                 st.rerun()
@@ -202,17 +197,76 @@ def analyze_news(text):
 
     return model.generate_content(prompt).text
 
-# -------------------- MAIN APP --------------------
+# -------------------- HEADER --------------------
 st.markdown("<h1 style='text-align:center;color:white;'>📰 Fake News Detector</h1>", unsafe_allow_html=True)
 
-news = st.text_area("Enter News")
+# -------------------- NAVIGATION --------------------
+c1, c2, c3 = st.columns(3)
+with c1:
+    if st.button("Analyze"):
+        st.session_state["page"] = "Analyze"
+with c2:
+    if st.button("Dashboard"):
+        st.session_state["page"] = "Dashboard"
+with c3:
+    if st.button("History"):
+        st.session_state["page"] = "History"
 
-if st.button("Analyze"):
-    with st.spinner("Analyzing..."):
-        time.sleep(1)
+# -------------------- ANALYZE --------------------
+if st.session_state["page"] == "Analyze":
+    news = st.text_area("Enter News")
+
+    if st.button("Run Analysis"):
+        placeholder = st.empty()
+        for i in range(3):
+            placeholder.write("🧠 AI analyzing...")
+            time.sleep(0.5)
+
         result = analyze_news(news)
+        placeholder.empty()
 
-    st.write(result)
+        confidence = int(re.search(r'(\d+)%', result).group(1)) if re.search(r'(\d+)%', result) else 50
+
+        if "fake" in result.lower():
+            st.error("🚨 Fake News")
+        elif "real" in result.lower():
+            st.success("✅ Real News")
+        else:
+            st.info("🤔 Unverified")
+
+        st.progress(confidence)
+        st.write(result)
+
+        c.execute("INSERT INTO history VALUES (?, ?, ?)",
+                  (st.session_state["user"], news, result))
+        conn.commit()
+
+# -------------------- DASHBOARD --------------------
+elif st.session_state["page"] == "Dashboard":
+    rows = c.execute("SELECT * FROM history").fetchall()
+
+    if rows:
+        df = pd.DataFrame(rows, columns=["User","News","Result"])
+
+        fake = df["Result"].str.contains("fake", case=False).sum()
+        real = df["Result"].str.contains("real", case=False).sum()
+        unv = df["Result"].str.contains("unverified", case=False).sum()
+
+        st.markdown('<div class="main-card">', unsafe_allow_html=True)
+        st.write("### Analytics")
+        st.bar_chart({"Fake":[fake], "Real":[real], "Unverified":[unv]})
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# -------------------- HISTORY --------------------
+elif st.session_state["page"] == "History":
+    rows = c.execute("SELECT * FROM history WHERE username=?",
+                     (st.session_state["user"],)).fetchall()
+
+    for r in rows[::-1]:
+        st.markdown('<div class="main-card">', unsafe_allow_html=True)
+        st.write("📰", r[1][:100])
+        st.write(r[2])
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------- LOGOUT --------------------
 if st.button("Logout"):
