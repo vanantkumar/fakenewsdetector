@@ -13,67 +13,71 @@ import time
 # -------------------- CONFIG --------------------
 st.set_page_config(page_title="AI Fake News Investigator", layout="wide")
 
-# -------------------- MODERN LOGIN CSS --------------------
+# -------------------- CSS --------------------
 st.markdown("""
 <style>
 
-/* Gradient Background */
+/* Layout background */
 .stApp {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
 }
 
-/* Center wrapper */
-.login-wrapper {
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:90vh;
+/* Split wrapper */
+.container {
+    display: flex;
+    height: 90vh;
 }
 
-/* Login Card */
-.login-card {
-    width: 380px;
-    padding: 35px;
-    border-radius: 15px;
+/* Left panel */
+.left {
+    width: 50%;
+    color: white;
+    padding: 80px;
+}
+
+.left h1 {
+    font-size: 40px;
+}
+
+.left p {
+    color: #ddd;
+}
+
+/* Right panel */
+.right {
+    width: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Card */
+.card {
     background: white;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    padding: 35px;
+    border-radius: 12px;
+    width: 350px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
 
-/* Title */
-.login-title {
-    font-size: 28px;
-    font-weight: bold;
-    color: #333;
+/* Input */
+.stTextInput>div>div>input {
+    border-radius: 6px;
 }
 
-/* Subtitle */
-.login-sub {
-    color: #777;
-    margin-bottom: 20px;
-}
-
-/* Buttons */
+/* Button */
 .stButton>button {
     width: 100%;
-    border-radius: 8px;
-    background: #667eea;
+    background: #2575fc;
     color: white;
-    font-weight: bold;
+    border-radius: 6px;
 }
 
-/* Toggle text */
-.toggle {
-    margin-top: 15px;
-    text-align: center;
-    color: #555;
-}
-
-/* Main cards */
-.card {
+/* Main app card */
+.main-card {
     background: rgba(255,255,255,0.08);
     padding:20px;
     border-radius:15px;
-    backdrop-filter: blur(10px);
 }
 
 </style>
@@ -96,60 +100,58 @@ if "user" not in st.session_state:
     st.session_state["user"] = None
 if "page" not in st.session_state:
     st.session_state["page"] = "Analyze"
-if "auth_mode" not in st.session_state:
-    st.session_state["auth_mode"] = "login"
 
 # -------------------- LOGIN --------------------
 if not st.session_state["user"]:
 
-    st.markdown('<div class="login-wrapper"><div class="login-card">', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
 
-    st.markdown('<div class="login-title">Welcome Back</div>', unsafe_allow_html=True)
-    st.markdown('<div class="login-sub">Login to continue</div>', unsafe_allow_html=True)
+    # LEFT PANEL
+    with col1:
+        st.markdown("""
+        <div class="left">
+            <h1>🕵️ AI Investigator</h1>
+            <p>Detect fake news using AI and real-time verification.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+    # RIGHT PANEL
+    with col2:
+        st.markdown('<div class="right"><div class="card">', unsafe_allow_html=True)
 
-    if st.session_state.auth_mode == "login":
+        st.markdown("### Login")
+
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
 
         if st.button("Login"):
             user = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
-
             if user and hashlib.sha256(password.encode()).hexdigest() == user[1]:
                 st.session_state["user"] = username
                 st.rerun()
             else:
                 st.error("Invalid credentials")
 
-        st.markdown('<div class="toggle">Don’t have an account?</div>', unsafe_allow_html=True)
+        st.markdown("---")
+
+        st.markdown("### Signup")
+
+        new_user = st.text_input("New Username")
+        new_pass = st.text_input("New Password", type="password")
 
         if st.button("Create Account"):
-            st.session_state.auth_mode = "signup"
-            st.rerun()
-
-    else:
-
-        st.markdown('<div class="login-title">Create Account</div>', unsafe_allow_html=True)
-
-        if st.button("Sign Up"):
-            if username and password:
+            if new_user and new_pass:
                 c.execute("INSERT INTO users VALUES (?, ?, ?)",
-                          (username, hashlib.sha256(password.encode()).hexdigest(), "user"))
+                          (new_user, hashlib.sha256(new_pass.encode()).hexdigest(), "user"))
                 conn.commit()
                 st.success("Account created")
 
-        st.markdown('<div class="toggle">Already have an account?</div>', unsafe_allow_html=True)
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
-        if st.button("Back to Login"):
-            st.session_state.auth_mode = "login"
-            st.rerun()
-
-    st.markdown('</div></div>', unsafe_allow_html=True)
     st.stop()
 
 # -------------------- GEMINI --------------------
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-
 model = genai.GenerativeModel(
     next(m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods)
 )
@@ -180,33 +182,29 @@ def analyze_news(text):
 
     return model.generate_content(prompt).text
 
-# -------------------- HEADER --------------------
-st.markdown("<h1 style='text-align:center;color:white;'>🕵️ AI Fake News Investigator</h1>", unsafe_allow_html=True)
+# -------------------- MAIN APP --------------------
+st.title("🕵️ AI Fake News Investigator")
 
-# -------------------- NAVIGATION --------------------
-c1, c2, c3 = st.columns(3)
-with c1:
-    if st.button("🧠 Analyze"):
+col1, col2, col3 = st.columns(3)
+with col1:
+    if st.button("Analyze"):
         st.session_state.page = "Analyze"
-with c2:
-    if st.button("📊 Dashboard"):
+with col2:
+    if st.button("Dashboard"):
         st.session_state.page = "Dashboard"
-with c3:
-    if st.button("📜 History"):
+with col3:
+    if st.button("History"):
         st.session_state.page = "History"
 
-page = st.session_state.page
-
 # -------------------- ANALYZE --------------------
-if page == "Analyze":
-    news = st.text_area("Enter News", height=200)
+if st.session_state.page == "Analyze":
 
-    if st.button("Analyze"):
+    news = st.text_area("Enter News")
 
-        # Cinematic thinking
+    if st.button("Run Analysis"):
         placeholder = st.empty()
-        for i in range(4):
-            placeholder.markdown(f"🧠 AI thinking{'.'*i}")
+        for i in range(3):
+            placeholder.write("🧠 Processing...")
             time.sleep(0.5)
 
         result = analyze_news(news)
@@ -214,54 +212,24 @@ if page == "Analyze":
 
         confidence = int(re.search(r'(\d+)%', result).group(1)) if re.search(r'(\d+)%', result) else 50
 
-        if "fake" in result.lower():
-            st.error("🚨 FAKE NEWS")
-        elif "real" in result.lower():
-            st.success("✅ REAL NEWS")
-        else:
-            st.info("🤔 UNVERIFIED")
-
-        st.metric("Confidence", f"{confidence}%")
+        st.write(result)
         st.progress(confidence)
-
-        # Typing effect
-        display = st.empty()
-        text_out = ""
-        for ch in result:
-            text_out += ch
-            display.markdown(f"<div class='card'>{text_out}</div>", unsafe_allow_html=True)
-            time.sleep(0.01)
 
         c.execute("INSERT INTO history VALUES (?, ?, ?)",
                   (st.session_state["user"], news, result))
         conn.commit()
 
 # -------------------- DASHBOARD --------------------
-elif page == "Dashboard":
-    rows = c.execute("SELECT * FROM history").fetchall()
-
-    if rows:
-        df = pd.DataFrame(rows, columns=["User","News","Result"])
-
-        fake = df["Result"].str.contains("fake", case=False).sum()
-        real = df["Result"].str.contains("real", case=False).sum()
-        unv = df["Result"].str.contains("unverified", case=False).sum()
-
-        col1, col2, col3 = st.columns(3)
-
-        col1.markdown(f"<div class='card'>🚨 Fake<br><h2>{fake}</h2></div>", unsafe_allow_html=True)
-        col2.markdown(f"<div class='card'>✅ Real<br><h2>{real}</h2></div>", unsafe_allow_html=True)
-        col3.markdown(f"<div class='card'>🤔 Unverified<br><h2>{unv}</h2></div>", unsafe_allow_html=True)
-
-        st.bar_chart({"Fake":[fake], "Real":[real], "Unverified":[unv]})
+elif st.session_state.page == "Dashboard":
+    st.write("Dashboard coming...")
 
 # -------------------- HISTORY --------------------
-elif page == "History":
+elif st.session_state.page == "History":
     rows = c.execute("SELECT * FROM history WHERE username=?",
                      (st.session_state["user"],)).fetchall()
 
-    for r in rows[::-1]:
-        st.markdown(f"<div class='card'>📰 {r[1][:150]}...<br><br>{r[2]}</div>", unsafe_allow_html=True)
+    for r in rows:
+        st.write(r)
 
 # -------------------- LOGOUT --------------------
 if st.button("Logout"):
