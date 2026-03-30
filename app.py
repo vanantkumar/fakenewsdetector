@@ -13,71 +13,67 @@ import time
 # -------------------- CONFIG --------------------
 st.set_page_config(page_title="AI Fake News Investigator", layout="wide")
 
-# -------------------- ANIMATED LOGIN CSS --------------------
+# -------------------- MODERN LOGIN CSS --------------------
 st.markdown("""
 <style>
 
-/* Animated gradient background */
-@keyframes gradientBG {
-    0% {background-position: 0% 50%;}
-    50% {background-position: 100% 50%;}
-    100% {background-position: 0% 50%;}
-}
-
+/* Gradient Background */
 .stApp {
-    background: linear-gradient(-45deg, #0f2027, #2c5364, #1a1a2e, #203a43);
-    background-size: 400% 400%;
-    animation: gradientBG 10s ease infinite;
+    background: linear-gradient(135deg, #667eea, #764ba2);
 }
 
-/* Login card */
+/* Center wrapper */
+.login-wrapper {
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:90vh;
+}
+
+/* Login Card */
 .login-card {
-    width: 350px;
-    margin: auto;
-    margin-top: 120px;
+    width: 380px;
     padding: 35px;
     border-radius: 15px;
-    background: rgba(255,255,255,0.08);
-    backdrop-filter: blur(15px);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
-    text-align: center;
+    background: white;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
 }
 
 /* Title */
 .login-title {
     font-size: 28px;
     font-weight: bold;
-    color: white;
+    color: #333;
 }
 
 /* Subtitle */
 .login-sub {
-    color: #ccc;
+    color: #777;
     margin-bottom: 20px;
-}
-
-/* Inputs */
-.stTextInput>div>div>input {
-    background: rgba(0,0,0,0.6);
-    color: white;
-    border-radius: 8px;
 }
 
 /* Buttons */
 .stButton>button {
+    width: 100%;
     border-radius: 8px;
-    background: linear-gradient(90deg,#00c6ff,#0072ff);
+    background: #667eea;
     color: white;
     font-weight: bold;
 }
 
-/* Cards */
+/* Toggle text */
+.toggle {
+    margin-top: 15px;
+    text-align: center;
+    color: #555;
+}
+
+/* Main cards */
 .card {
-    background: rgba(255,255,255,0.05);
-    backdrop-filter: blur(12px);
-    border-radius:15px;
+    background: rgba(255,255,255,0.08);
     padding:20px;
-    margin-top:15px;
+    border-radius:15px;
+    backdrop-filter: blur(10px);
 }
 
 </style>
@@ -103,14 +99,13 @@ if "page" not in st.session_state:
 if "auth_mode" not in st.session_state:
     st.session_state["auth_mode"] = "login"
 
-# -------------------- LOGIN / SIGNUP --------------------
+# -------------------- LOGIN --------------------
 if not st.session_state["user"]:
 
-    st.markdown("""
-    <div class="login-card">
-        <div class="login-title">🕵️ Investigator</div>
-        <div class="login-sub">Secure access portal</div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="login-wrapper"><div class="login-card">', unsafe_allow_html=True)
+
+    st.markdown('<div class="login-title">Welcome Back</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-sub">Login to continue</div>', unsafe_allow_html=True)
 
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
@@ -119,34 +114,42 @@ if not st.session_state["user"]:
 
         if st.button("Login"):
             user = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+
             if user and hashlib.sha256(password.encode()).hexdigest() == user[1]:
                 st.session_state["user"] = username
                 st.rerun()
             else:
                 st.error("Invalid credentials")
 
-        if st.button("Switch to Signup"):
+        st.markdown('<div class="toggle">Don’t have an account?</div>', unsafe_allow_html=True)
+
+        if st.button("Create Account"):
             st.session_state.auth_mode = "signup"
             st.rerun()
 
     else:
 
-        if st.button("Create Account"):
+        st.markdown('<div class="login-title">Create Account</div>', unsafe_allow_html=True)
+
+        if st.button("Sign Up"):
             if username and password:
                 c.execute("INSERT INTO users VALUES (?, ?, ?)",
                           (username, hashlib.sha256(password.encode()).hexdigest(), "user"))
                 conn.commit()
                 st.success("Account created")
 
-        if st.button("Switch to Login"):
+        st.markdown('<div class="toggle">Already have an account?</div>', unsafe_allow_html=True)
+
+        if st.button("Back to Login"):
             st.session_state.auth_mode = "login"
             st.rerun()
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('</div></div>', unsafe_allow_html=True)
     st.stop()
 
 # -------------------- GEMINI --------------------
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+
 model = genai.GenerativeModel(
     next(m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods)
 )
@@ -199,13 +202,15 @@ if page == "Analyze":
     news = st.text_area("Enter News", height=200)
 
     if st.button("Analyze"):
-        with st.spinner("🧠 Investigating..."):
-            progress = st.progress(0)
-            for i in range(100):
-                time.sleep(0.01)
-                progress.progress(i+1)
 
-            result = analyze_news(news)
+        # Cinematic thinking
+        placeholder = st.empty()
+        for i in range(4):
+            placeholder.markdown(f"🧠 AI thinking{'.'*i}")
+            time.sleep(0.5)
+
+        result = analyze_news(news)
+        placeholder.empty()
 
         confidence = int(re.search(r'(\d+)%', result).group(1)) if re.search(r'(\d+)%', result) else 50
 
@@ -219,7 +224,13 @@ if page == "Analyze":
         st.metric("Confidence", f"{confidence}%")
         st.progress(confidence)
 
-        st.markdown(f"<div class='card'>{result}</div>", unsafe_allow_html=True)
+        # Typing effect
+        display = st.empty()
+        text_out = ""
+        for ch in result:
+            text_out += ch
+            display.markdown(f"<div class='card'>{text_out}</div>", unsafe_allow_html=True)
+            time.sleep(0.01)
 
         c.execute("INSERT INTO history VALUES (?, ?, ?)",
                   (st.session_state["user"], news, result))
