@@ -13,22 +13,42 @@ import time
 # -------------------- CONFIG --------------------
 st.set_page_config(page_title="Fake News Detector", layout="wide")
 
-# -------------------- CSS --------------------
+# -------------------- CSS FIX --------------------
 st.markdown("""
 <style>
 
-/* Background */
-.stApp {
-    background: linear-gradient(135deg, #6a11cb, #2575fc);
+/* REMOVE TOP WHITE SPACE COMPLETELY */
+header, footer {
+    visibility: hidden;
 }
 
-/* Remove top space */
 .block-container {
-    padding-top: 1rem;
+    padding-top: 0rem;
+    padding-bottom: 0rem;
+}
+
+/* BACKGROUND IMAGE */
+.stApp {
+    background-image: url("https://media.gettyimages.com/id/1335171779/photo/fake-or-real.jpg?s=612x612&w=0&k=20&c=4ihkaDS1Ry0i9ev41--smxxH5ir8vWM4Q4JL93VhC_k=");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+/* DARK OVERLAY */
+.stApp::before {
+    content: "";
+    position: fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.65);
+    z-index:0;
 }
 
 /* LEFT PANEL */
 .left {
+    position: relative;
+    z-index: 1;
     color: white;
     padding: 120px 60px;
 }
@@ -45,27 +65,24 @@ st.markdown("""
 
 /* RIGHT CARD */
 .card {
-    background: white;
+    position: relative;
+    z-index: 1;
+    background: rgba(255,255,255,0.95);
     padding: 30px;
     border-radius: 12px;
     max-width: 420px;
     margin: auto;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    margin-top: 120px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
 
-/* Buttons */
+/* BUTTON */
 .stButton>button {
     width: 100%;
     border-radius: 6px;
     background: #2575fc;
     color: white;
-}
-
-/* Main cards */
-.main-card {
-    background: rgba(255,255,255,0.08);
-    padding:20px;
-    border-radius:15px;
+    font-weight: bold;
 }
 
 </style>
@@ -93,7 +110,7 @@ if "page" not in st.session_state:
 if "auth_mode" not in st.session_state:
     st.session_state["auth_mode"] = "login"
 
-# -------------------- LOGIN SYSTEM --------------------
+# -------------------- LOGIN --------------------
 if not st.session_state["user"]:
 
     col1, col2 = st.columns([1,1])
@@ -106,10 +123,6 @@ if not st.session_state["user"]:
             <p>Detect fake news using AI and real-time verification.</p>
         </div>
         """, unsafe_allow_html=True)
-
-        if st.button("Signup"):
-            st.session_state["auth_mode"] = "signup"
-            st.rerun()
 
     # RIGHT SIDE
     with col2:
@@ -130,6 +143,11 @@ if not st.session_state["user"]:
                     st.rerun()
                 else:
                     st.error("Invalid credentials")
+
+            # 👇 Signup BELOW login
+            if st.button("Signup"):
+                st.session_state["auth_mode"] = "signup"
+                st.rerun()
 
         else:
             st.markdown("### Signup")
@@ -154,7 +172,6 @@ if not st.session_state["user"]:
 
 # -------------------- GEMINI --------------------
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-
 model = genai.GenerativeModel(
     next(m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods)
 )
@@ -185,80 +202,17 @@ def analyze_news(text):
 
     return model.generate_content(prompt).text
 
-# -------------------- HEADER --------------------
+# -------------------- MAIN APP --------------------
 st.markdown("<h1 style='text-align:center;color:white;'>📰 Fake News Detector</h1>", unsafe_allow_html=True)
 
-# -------------------- NAVIGATION --------------------
-c1, c2, c3 = st.columns(3)
+news = st.text_area("Enter News")
 
-with c1:
-    if st.button("Analyze"):
-        st.session_state["page"] = "Analyze"
-
-with c2:
-    if st.button("Dashboard"):
-        st.session_state["page"] = "Dashboard"
-
-with c3:
-    if st.button("History"):
-        st.session_state["page"] = "History"
-
-# -------------------- ANALYZE --------------------
-if st.session_state["page"] == "Analyze":
-
-    news = st.text_area("Enter News")
-
-    if st.button("Run Analysis"):
-
-        placeholder = st.empty()
-        for i in range(3):
-            placeholder.write("🧠 AI analyzing...")
-            time.sleep(0.5)
-
+if st.button("Analyze"):
+    with st.spinner("Analyzing..."):
+        time.sleep(1)
         result = analyze_news(news)
-        placeholder.empty()
 
-        confidence = int(re.search(r'(\d+)%', result).group(1)) if re.search(r'(\d+)%', result) else 50
-
-        if "fake" in result.lower():
-            st.error("🚨 Fake News")
-        elif "real" in result.lower():
-            st.success("✅ Real News")
-        else:
-            st.info("🤔 Unverified")
-
-        st.progress(confidence)
-        st.write(result)
-
-        c.execute("INSERT INTO history VALUES (?, ?, ?)",
-                  (st.session_state["user"], news, result))
-        conn.commit()
-
-# -------------------- DASHBOARD --------------------
-elif st.session_state["page"] == "Dashboard":
-
-    rows = c.execute("SELECT * FROM history").fetchall()
-
-    if rows:
-        df = pd.DataFrame(rows, columns=["User","News","Result"])
-
-        fake = df["Result"].str.contains("fake", case=False).sum()
-        real = df["Result"].str.contains("real", case=False).sum()
-        unv = df["Result"].str.contains("unverified", case=False).sum()
-
-        st.write("### Analytics")
-        st.bar_chart({"Fake":[fake], "Real":[real], "Unverified":[unv]})
-
-# -------------------- HISTORY --------------------
-elif st.session_state["page"] == "History":
-
-    rows = c.execute("SELECT * FROM history WHERE username=?",
-                     (st.session_state["user"],)).fetchall()
-
-    for r in rows[::-1]:
-        st.write("📰", r[1][:100])
-        st.write(r[2])
-        st.write("---")
+    st.write(result)
 
 # -------------------- LOGOUT --------------------
 if st.button("Logout"):
