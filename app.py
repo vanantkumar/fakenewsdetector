@@ -211,7 +211,7 @@ st.markdown("<h1 style='text-align:center;color:white;'>📰 </h1>"
             "<h1 style='text-align:center;color:white;'> Fake </h1>"
             "<h1 style='text-align:center;color:white;'> News </h1>"
             "<h1 style='text-align:center;color:white;'> Detector</h1>"
-             "<h1 style='text-align:center;color:white;'> ----------------</h1>"
+             "<h1 style='text-align:center;color:white;'> -----------------------------------</h1>"
             , unsafe_allow_html=True)
 
 # -------------------- NAVIGATION --------------------
