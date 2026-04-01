@@ -132,6 +132,10 @@ if not st.session_state["user"]:
             if st.button("Signup"):
                 st.session_state["auth_mode"] = "signup"
                 st.rerun()
+                st.markdown(
+    "<p style='text-align:center; color:gray;'>Don't have an account?</p>",
+    unsafe_allow_html=True
+)
 
         else:
             st.markdown("### Signup")
