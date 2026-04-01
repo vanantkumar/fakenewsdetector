@@ -108,7 +108,7 @@ if not st.session_state["user"]:
         st.markdown("""
         <div class="left">
             <h1>📰 Fake News Detector</h1>
-            <p>Detect fake news using AI and real-time verification.</p>
+            <p>Detect fake news and real-time verification.</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -133,11 +133,13 @@ if not st.session_state["user"]:
                 st.session_state["auth_mode"] = "signup"
                 st.rerun()
 
+        <p>If new Register now.</p>
+
         else:
             st.markdown("### Signup")
 
-            new_user = st.text_input("New Username")
-            new_pass = st.text_input("New Password", type="password")
+            new_user = st.text_input("Create Username")
+            new_pass = st.text_input("Create Password", type="password")
             confirm_pass = st.text_input("Confirm Password", type="password")  # ✅ NEW FIELD
 
             if st.button("Create Account"):
