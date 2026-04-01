@@ -100,67 +100,73 @@ if "auth_mode" not in st.session_state:
     st.session_state["auth_mode"] = "login"
 
 # -------------------- LOGIN --------------------
+# -------------------- LOGIN --------------------
 if not st.session_state["user"]:
 
-    col1, col2 = st.columns([1,1])
+    col1, col2 = st.columns([1, 1])
 
+    # LEFT SIDE
     with col1:
         st.markdown("""
         <div class="left">
             <h1>📰 Fake News Detector</h1>
-            <p>Detect fake news and real-time verification.</p>
+            <p>Detect fake news using AI and real-time verification.</p>
         </div>
         """, unsafe_allow_html=True)
 
+    # RIGHT SIDE
     with col2:
         st.markdown('<div class="card">', unsafe_allow_html=True)
 
+        # LOGIN MODE
         if st.session_state["auth_mode"] == "login":
+
             st.markdown("### Login")
 
             username = st.text_input("Username")
             password = st.text_input("Password", type="password")
 
-        if st.session_state["auth_mode"] == "login":
+            if st.button("Login"):
+                user = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
 
-    st.markdown("### Login")
+                if user and hashlib.sha256(password.encode()).hexdigest() == user[1]:
+                    st.session_state["user"] = username
+                    st.rerun()
+                else:
+                    st.error("Invalid credentials")
 
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+            # TEXT BEFORE SIGNUP
+            st.markdown(
+                "<p style='text-align:center; color:gray;'>Don't have an account?</p>",
+                unsafe_allow_html=True
+            )
 
-    # LOGIN BUTTON
-    if st.button("Login"):
-        user = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+            if st.button("Signup"):
+                st.session_state["auth_mode"] = "signup"
+                st.rerun()
 
-        if user and hashlib.sha256(password.encode()).hexdigest() == user[1]:
-            st.session_state["user"] = username
-            st.rerun()
+        # SIGNUP MODE
         else:
-            st.error("Invalid credentials")
 
-    st.markdown(
-        "<p style='text-align:center; color:gray;'>Don't have an account?</p>",
-        unsafe_allow_html=True
-    )
-
-    # SIGNUP BUTTON
-    if st.button("Signup"):
-        st.session_state["auth_mode"] = "signup"
-        st.rerun()
-
-        else:
             st.markdown("### Signup")
 
-            new_user = st.text_input("Create Username")
-            new_pass = st.text_input("Create Password", type="password")
-            confirm_pass = st.text_input("Confirm Password", type="password")  # ✅ NEW FIELD
+            new_user = st.text_input("New Username")
+            new_pass = st.text_input("New Password", type="password")
+            confirm_pass = st.text_input("Confirm Password", type="password")
 
             if st.button("Create Account"):
-                if new_user and new_pass:
+
+                if not new_user or not new_pass or not confirm_pass:
+                    st.warning("All fields are required")
+
+                elif new_pass != confirm_pass:
+                    st.error("Passwords do not match")
+
+                else:
                     c.execute("INSERT INTO users VALUES (?, ?, ?)",
                               (new_user, hashlib.sha256(new_pass.encode()).hexdigest(), "user"))
                     conn.commit()
-                    st.success("Account created")
+                    st.success("Account created successfully 🎉")
 
             if st.button("Back to Login"):
                 st.session_state["auth_mode"] = "login"
@@ -169,7 +175,6 @@ if not st.session_state["user"]:
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.stop()
-
 # -------------------- GEMINI --------------------
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 model = genai.GenerativeModel(
