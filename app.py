@@ -138,6 +138,7 @@ if not st.session_state["user"]:
 
             new_user = st.text_input("New Username")
             new_pass = st.text_input("New Password", type="password")
+            confirm_pass = st.text_input("Confirm Password", type="password")  # ✅ NEW FIELD
 
             if st.button("Create Account"):
                 if new_user and new_pass:
