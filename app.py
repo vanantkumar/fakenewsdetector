@@ -210,7 +210,9 @@ def analyze_news(text):
 st.markdown("<h1 style='text-align:center;color:white;'>📰 </h1>"
             "<h1 style='text-align:center;color:white;'> Fake </h1>"
             "<h1 style='text-align:center;color:white;'> News </h1>"
-            "<h1 style='text-align:center;color:white;'> Detector</h1>", unsafe_allow_html=True)
+            "<h1 style='text-align:center;color:white;'> Detector</h1>"
+             "<h1 style='text-align:center;color:white;'> ----------------</h1>"
+            , unsafe_allow_html=True)
 
 # -------------------- NAVIGATION --------------------
 c1, c2, c3 = st.columns(3)
