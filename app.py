@@ -59,7 +59,33 @@ header, footer {
     color: #ddd;
 }
 
+/* RIGHT CARD */
+.card {
+    position: relative;
+    z-index: 1;
+    background: rgba(255,255,255,0.95);
+    padding: 30px;
+    border-radius: 12px;
+    max-width: 420px;
+    margin: auto;
+    margin-top: 120px;
+}
 
+/* BUTTON */
+.stButton>button {
+    width: 100%;
+    border-radius: 6px;
+    background: #2575fc;
+    color: white;
+}
+
+/* MAIN CARDS */
+.main-card {
+    background: rgba(255,255,255,0.08);
+    padding:20px;
+    border-radius:15px;
+    color:white;
+}
 
 </style>
 """, unsafe_allow_html=True)
@@ -85,51 +111,56 @@ if "auth_mode" not in st.session_state:
     st.session_state["auth_mode"] = "login"
 
 # -------------------- LOGIN --------------------
-if st.session_state["auth_mode"] == "login":
+if not st.session_state["user"]:
 
-    st.markdown("### Login")
+    col1, col2 = st.columns([1,1])
 
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+    with col1:
+        st.markdown("""
+        <div class="left">
+            <h1>📰 Fake News Detector</h1>
+            <p>Detect fake news using AI and real-time verification.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    if st.button("Login"):
-        user = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+    with col2:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
 
-        if user and hashlib.sha256(password.encode()).hexdigest() == user[1]:
-            st.session_state["user"] = username
-            st.rerun()
-        else:
-            st.error("Invalid credentials")
+        if st.session_state["auth_mode"] == "login":
+            st.markdown("### Login")
 
-    if st.button("Signup"):
-        st.session_state["auth_mode"] = "signup"
-        st.rerun()
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
 
-else:
+            if st.button("Login"):
+                user = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+                if user and hashlib.sha256(password.encode()).hexdigest() == user[1]:
+                    st.session_state["user"] = username
+                    st.rerun()
+                else:
+                    st.error("Invalid credentials")
 
-    st.markdown("### Signup")
-
-    new_user = st.text_input("New Username")
-    new_pass = st.text_input("New Password", type="password")
-    confirm_pass = st.text_input("Confirm Password", type="password")
-
-    if st.button("Create Account"):
-
-        if not new_user or not new_pass or not confirm_pass:
-            st.warning("All fields are required")
-
-        elif new_pass != confirm_pass:
-            st.error("Passwords do not match")
+            if st.button("Signup"):
+                st.session_state["auth_mode"] = "signup"
+                st.rerun()
 
         else:
-            c.execute("INSERT INTO users VALUES (?, ?, ?)",
-                      (new_user, hashlib.sha256(new_pass.encode()).hexdigest(), "user"))
-            conn.commit()
-            st.success("Account created successfully 🎉")
+            st.markdown("### Signup")
 
-    if st.button("Back to Login"):
-        st.session_state["auth_mode"] = "login"
-        st.rerun()
+            new_user = st.text_input("New Username")
+            new_pass = st.text_input("New Password", type="password")
+
+            if st.button("Create Account"):
+                if new_user and new_pass:
+                    c.execute("INSERT INTO users VALUES (?, ?, ?)",
+                              (new_user, hashlib.sha256(new_pass.encode()).hexdigest(), "user"))
+                    conn.commit()
+                    st.success("Account created")
+
+            if st.button("Back to Login"):
+                st.session_state["auth_mode"] = "login"
+                st.rerun()
+
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.stop()
