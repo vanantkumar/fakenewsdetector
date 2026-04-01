@@ -71,13 +71,6 @@ header, footer {
     margin-top: 120px;
 }
 
-/* BUTTON */
-.stButton>button {
-    width: 100%;
-    border-radius: 6px;
-    background: #2575fc;
-    color: white;
-}
 
 
 </style>
