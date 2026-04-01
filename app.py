@@ -79,13 +79,6 @@ header, footer {
     color: white;
 }
 
-/* MAIN CARDS */
-.main-card {
-    background: rgba(255,255,255,0.08);
-    padding:20px;
-    border-radius:15px;
-    color:white;
-}
 
 </style>
 """, unsafe_allow_html=True)
