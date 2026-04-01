@@ -59,18 +59,6 @@ header, footer {
     color: #ddd;
 }
 
-/* RIGHT CARD */
-.card {
-    position: relative;
-    z-index: 1;
-    background: rgba(255,255,255,0.95);
-    padding: 30px;
-    border-radius: 12px;
-    max-width: 420px;
-    margin: auto;
-    margin-top: 120px;
-}
-
 
 
 </style>
