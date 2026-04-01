@@ -119,7 +119,7 @@ if not st.session_state["user"]:
                 st.rerun()
 
        else:
-    st.markdown("### Signup")
+            st.markdown("### Signup")
 
     new_user = st.text_input("New Username")
     new_pass = st.text_input("New Password", type="password")
