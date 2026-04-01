@@ -133,8 +133,6 @@ if not st.session_state["user"]:
                 st.session_state["auth_mode"] = "signup"
                 st.rerun()
 
-        <p>If new Register now.</p>
-
         else:
             st.markdown("### Signup")
 
