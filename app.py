@@ -121,23 +121,32 @@ if not st.session_state["user"]:
             username = st.text_input("Username")
             password = st.text_input("Password", type="password")
 
-            if st.button("Login"):
-                user = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
-                if user and hashlib.sha256(password.encode()).hexdigest() == user[1]:
-                    st.session_state["user"] = username
-                    st.rerun()
-                else:
-                    st.error("Invalid credentials")
+           if st.session_state["auth_mode"] == "login":
 
-       st.markdown(
-                  "<p style='text-align:center;'>Don't have an account?</p>",
-                    unsafe_allow_html=True
-                  )
+    st.markdown("### Login")
 
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
 
-            if st.button("Signup"):
-                st.session_state["auth_mode"] = "signup"
-                st.rerun()
+    # LOGIN BUTTON
+    if st.button("Login"):
+        user = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+
+        if user and hashlib.sha256(password.encode()).hexdigest() == user[1]:
+            st.session_state["user"] = username
+            st.rerun()
+        else:
+            st.error("Invalid credentials")
+
+    st.markdown(
+        "<p style='text-align:center; color:gray;'>Don't have an account?</p>",
+        unsafe_allow_html=True
+    )
+
+    # SIGNUP BUTTON
+    if st.button("Signup"):
+        st.session_state["auth_mode"] = "signup"
+        st.rerun()
 
         else:
             st.markdown("### Signup")
